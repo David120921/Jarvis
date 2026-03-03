@@ -4,19 +4,22 @@ import webbrowser
 import Levenshtein
 
 # ==========================
-# CONFIG – EDIT PATHS HERE
-# ==========================
-
-STEAM_PATH = r"D:\Steam\Steam.exe"
-VSCODE_PATH = r"D:\VSCode\Code.exe"
-DISCORD_PATH = r"D:\Discord\Update.exe --processStart Discord.exe"
-
-# ==========================
 # FUZZY MATCH
 # ==========================
 
 def fuzzy_match(a: str, b: str, threshold=0.6):
     return Levenshtein.ratio(a.lower(), b.lower()) >= threshold
+
+# ==========================
+# SAFE APP LAUNCHER
+# ==========================
+
+def open_app(command, success_message):
+    try:
+        subprocess.Popen(command.split())
+        return success_message
+    except Exception as e:
+        return f"Error: {e}"
 
 # ==========================
 # MAIN COMMAND HANDLER
@@ -33,14 +36,10 @@ def run_command(text: str):
         return f"The time is {now}"
 
     # ========================
-    # OPEN CHROME
+    # OPEN CHROME (Ubuntu)
     # ========================
-    if fuzzy_match(text, "open chrome"):
-        try:
-            subprocess.Popen("chrome.exe")
-            return "Opening Chrome"
-        except:
-            return "Chrome not found."
+    if fuzzy_match(text, "open Google"):
+        return open_app("google-chrome", "Opening Chrome")
 
     # ========================
     # OPEN YOUTUBE
@@ -57,33 +56,15 @@ def run_command(text: str):
         return "Opening ChatGPT"
 
     # ========================
-    # OPEN STEAM (D:)
-    # ========================
-    if fuzzy_match(text, "open steam"):
-        try:
-            subprocess.Popen(STEAM_PATH)
-            return "Opening Steam"
-        except Exception as e:
-            return f"Steam error: {e}"
-
-    # ========================
-    # OPEN VS CODE (D:)
+    # OPEN VS CODE (Ubuntu)
     # ========================
     if fuzzy_match(text, "open vs code") or fuzzy_match(text, "open visual studio"):
-        try:
-            subprocess.Popen(VSCODE_PATH)
-            return "Opening Visual Studio Code"
-        except Exception as e:
-            return f"VS Code error: {e}"
+        return open_app("code", "Opening Visual Studio Code")
 
     # ========================
-    # OPEN DISCORD (D:)
+    # OPEN DISCORD (Ubuntu)
     # ========================
     if fuzzy_match(text, "open discord"):
-        try:
-            subprocess.Popen(DISCORD_PATH, shell=True)
-            return "Opening Discord"
-        except Exception as e:
-            return f"Discord error: {e}"
+        return open_app("discord", "Opening Discord")
 
     return None

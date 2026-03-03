@@ -192,7 +192,7 @@ with sd.RawInputStream(
         wake_detected = False
 
         for word in words:
-            if fuzzy_match(word, WAKE_WORD, 0.1):
+            if fuzzy_match(word, WAKE_WORD, 1):
                 wake_detected = True
                 break
 
@@ -203,7 +203,7 @@ with sd.RawInputStream(
             command_words = []
 
             for word in words:
-                if not fuzzy_match(word, WAKE_WORD, 0.75):
+                if not fuzzy_match(word, WAKE_WORD, 0.01):
                     command_words.append(word)
 
             command = " ".join(command_words).strip()
