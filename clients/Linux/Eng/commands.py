@@ -4,67 +4,157 @@ import webbrowser
 import Levenshtein
 
 # ==========================
-# FUZZY MATCH
+# FUZZY MATCH SETTINGS
 # ==========================
 
-def fuzzy_match(a: str, b: str, threshold=0.6):
-    return Levenshtein.ratio(a.lower(), b.lower()) >= threshold
+THRESHOLD = 0.75
+
+
+def similarity(a: str, b: str):
+    return Levenshtein.ratio(a.lower(), b.lower())
+
 
 # ==========================
-# SAFE APP LAUNCHER
+# COMMAND LIST
 # ==========================
 
-def open_app(command, success_message):
+COMMANDS = {
+    "open discord": "discord",
+    "open chrome": "google-chrome",
+    "open youtube": "youtube",
+    "open chatgpt": "chatgpt",
+    "open visual studio code": "code",
+    "time": "time",
+    "shutdown": "shutdown",
+    "restart": "restart",
+    "log out": "logout",
+    "kill your self": "stop"
+}
+
+
+# ==========================
+# FIND CLOSEST COMMAND
+# ==========================
+
+def closest_command(text):
+    best_match = None
+    best_score = 0
+
+    for command in COMMANDS:
+        score = similarity(text, command)
+
+        if score > best_score:
+            best_score = score
+            best_match = command
+
+    if best_score >= THRESHOLD:
+        return best_match
+
+    return None
+
+
+# ==========================
+# APP LAUNCHER
+# ==========================
+
+def open_app(command, message):
     try:
-        subprocess.Popen(command.split())
-        return success_message
+        subprocess.Popen([command])
+        return message
     except Exception as e:
-        return f"Error: {e}"
+        return f"Error opening app: {e}"
+
 
 # ==========================
 # MAIN COMMAND HANDLER
 # ==========================
 
 def run_command(text: str):
-    text = text.lower()
 
-    # ========================
+    text = text.lower().strip()
+
+    command = closest_command(text)
+
+    if command is None:
+        return None
+
+    action = COMMANDS[command]
+
+    # ======================
     # TIME
-    # ========================
-    if "time" in text:
+    # ======================
+
+    if action == "time":
         now = datetime.datetime.now().strftime("%I:%M %p")
         return f"The time is {now}"
 
-    # ========================
-    # OPEN CHROME (Ubuntu)
-    # ========================
-    if fuzzy_match(text, "open Google"):
+    # ======================
+    # OPEN DISCORD
+    # ======================
+
+    if action == "discord":
+        return open_app("discord", "Opening Discord")
+
+    # ======================
+    # OPEN CHROME
+    # ======================
+
+    if action == "google-chrome":
         return open_app("google-chrome", "Opening Chrome")
 
-    # ========================
+    # ======================
     # OPEN YOUTUBE
-    # ========================
-    if fuzzy_match(text, "open youtube"):
-        webbrowser.open("https://www.youtube.com")
+    # ======================
+
+    if action == "youtube":
+        webbrowser.open("https://youtube.com")
         return "Opening YouTube"
 
-    # ========================
+    # ======================
     # OPEN CHATGPT
-    # ========================
-    if fuzzy_match(text, "open chat gpt") or fuzzy_match(text, "open chatgpt"):
+    # ======================
+
+    if action == "chatgpt":
         webbrowser.open("https://chat.openai.com")
         return "Opening ChatGPT"
 
-    # ========================
-    # OPEN VS CODE (Ubuntu)
-    # ========================
-    if fuzzy_match(text, "open vs code") or fuzzy_match(text, "open visual studio"):
+    # ======================
+    # OPEN VS CODE
+    # ======================
+
+    if action == "code":
         return open_app("code", "Opening Visual Studio Code")
 
-    # ========================
-    # OPEN DISCORD (Ubuntu)
-    # ========================
-    if fuzzy_match(text, "open discord"):
-        return open_app("discord", "Opening Discord")
+    # ======================
+    # SHUTDOWN
+    # ======================
+
+    if action == "shutdown":
+        subprocess.Popen(["shutdown", "-h", "now"])
+        return "Shutting down your computer."
+
+    # ======================
+    # RESTART
+    # ======================
+
+    if action == "restart":
+        subprocess.Popen(["shutdown", "-r", "now"])
+        return "Restarting your computer."
+
+    # ======================
+    # LOG OUT
+    # ======================
+
+    if action == "logout":
+        subprocess.Popen(["gnome-session-quit", "--logout", "--no-prompt"])
+        return "Logging out..."
+
+    # ======================
+    # STOP JARVIS
+    # ======================
+
+    if action == "stop":
+        jarvis_wake.running = False
+        return "Goodbye! Have a nice day!"
 
     return None

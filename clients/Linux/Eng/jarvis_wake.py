@@ -12,7 +12,8 @@ import asyncio
 import edge_tts
 import pygame
 import Levenshtein
-import commands  # <-- your commands.py file
+import commands 
+from colorama import Fore, Style
 
 # ==============================
 # CONFIG
@@ -49,9 +50,11 @@ def fuzzy_match(a: str, b: str, threshold=0.75):
 # Load Vosk Model
 # ==============================
 
+print(Fore.GREEN)
 print("Loading Vosk model...")
 model = vosk.Model(MODEL_PATH)
 print("Model loaded.")
+print(Style.RESET_ALL)
 
 # ==============================
 # Audio Callback
@@ -74,6 +77,7 @@ def speak(text: str):
     def _run():
         global is_speaking
         is_speaking = True
+        print(Fore.CYAN)
         print("Jarvis:", text)
 
         async def generate():
@@ -95,7 +99,9 @@ def speak(text: str):
                 os.remove(temp_path)
 
             except Exception as e:
+                print(Fore.RED)
                 print("TTS error:", e)
+                print(Style.RESET_ALL)
 
         try:
             asyncio.run(generate())
@@ -117,6 +123,7 @@ def ask_server(text: str):
         )
         return r.json().get("reply", "No response.")
     except Exception as e:
+        print(Fore.RED)
         print("Server error:", e)
         return "I am having trouble connecting to the server."
 
@@ -128,6 +135,7 @@ def check_local_command(text: str):
     try:
         return commands.run_command(text)
     except Exception as e:
+        print(Fore.RED)
         print("Command error:", e)
         return None
 
@@ -157,6 +165,7 @@ def listen_for_phrase(timeout=None):
 
 def shutdown_handler(sig, frame):
     global running
+    print(Fore.RED)
     print("\nShutting down...")
     running = False
 
@@ -165,7 +174,7 @@ signal.signal(signal.SIGINT, shutdown_handler)
 # ==============================
 # MAIN LOOP
 # ==============================
-
+print(Style.RESET_ALL)
 print("Jarvis online.")
 print(f"Say '{WAKE_WORD}' to activate.\n")
 
@@ -197,6 +206,7 @@ with sd.RawInputStream(
                 break
 
         if wake_detected:
+            print(Fore.BLUE)
             print("Wake word detected!")
 
             # Remove fuzzy wake word
@@ -209,13 +219,15 @@ with sd.RawInputStream(
             command = " ".join(command_words).strip()
 
             if command == "":
+                print(Fore.BLUE)
                 speak("Yes sir.")
                 command = listen_for_phrase(timeout=COMMAND_TIMEOUT)
 
                 if command == "":
+                    print(Fore.BLUE)
                     speak("I didn't catch anything. Please try again.")
                     continue
-
+            print(Fore.YELLOW)
             print("You:", command)
 
             # ==============================
@@ -229,5 +241,5 @@ with sd.RawInputStream(
             else:
                 reply = ask_server(command)
                 speak(reply)
-
+print(Style.RESET_ALL)
 print("Exited cleanly.")
