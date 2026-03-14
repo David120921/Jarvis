@@ -23,6 +23,8 @@ COMMANDS = {
     "open chrome": "google-chrome",
     "open youtube": "youtube",
     "open chatgpt": "chatgpt",
+    "little brother": "little brother",
+    "bigger sister": "helping",
     "open visual studio code": "code",
     "time": "time",
     "shutdown": "shutdown",
@@ -117,6 +119,20 @@ def run_command(text: str):
     if action == "chatgpt":
         webbrowser.open("https://chat.openai.com")
         return "Opening ChatGPT"
+    
+    # ======================
+    # LITTLE BROTHER
+    # ======================
+
+    if action == "little brother":
+        webbrowser.open("https://www.youtube.com/watch?v=LbOve_UZZ54")
+        return "Helping with your little brother"
+    
+    if action == "helping":
+        return "Oh god, just run away, " \
+        "run away as fast as you can, don't look back, just run, " \
+        "run for your life, save yourself, get out of there, don't stop, keep running, " \
+        "find a safe place, call for help, do whatever it takes to stay safe, just run! Calling FBI"
 
     # ======================
     # OPEN VS CODE
