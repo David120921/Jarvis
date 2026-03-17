@@ -27,7 +27,6 @@ TTS_TOKEN = "sk_de201713a820264afe8a612b2131440c5af7190e8a49d857"
 SAMPLE_RATE = 16000
 BLOCK_SIZE = 8000
 COMMAND_TIMEOUT = 6  # seconds
-XZ
 
 # ==============================
 # GLOBAL STATE
@@ -212,6 +211,7 @@ with sd.RawInputStream(
         if wake_detected:
             print(Fore.BLUE)
             print("Wake word detected!")
+            
 
             # Remove fuzzy wake word
             command_words = []
