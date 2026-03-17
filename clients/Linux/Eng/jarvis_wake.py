@@ -11,8 +11,8 @@ import signal
 import pygame
 import Levenshtein
 import commands 
+from TTS.api import TTS
 from colorama import Fore, Style
-from elevenlabs.client import ElevenLabs
 
 # ==============================
 # CONFIG
@@ -26,7 +26,9 @@ TTS_TOKEN = "sk_de201713a820264afe8a612b2131440c5af7190e8a49d857"
 
 SAMPLE_RATE = 16000
 BLOCK_SIZE = 8000
-COMMAND_TIMEOUT = 6  # seconds
+COMMAND_TIMEOUT = 6
+tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", progress_bar=False)
+
 
 # ==============================
 # GLOBAL STATE
@@ -79,20 +81,14 @@ def speak(text: str):
         print("Jarvis:", text)
 
         try:
-            client = ElevenLabs(api_key=TTS_TOKEN)
-
-            audio = client.text_to_speech.convert(
-                voice_id="pNInz6obpgDQGcFmaJgB",  # default ElevenLabs voice (Bella)
-                model_id="eleven_multilingual_v2",
-                text=text
-            )
-
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
                 temp_path = f.name
 
-                with open(temp_path, "wb") as audio_file:
-                    for chunk in audio:
-                        audio_file.write(chunk)
+            # Generate speech (AI TTS)
+            tts.tts_to_file(
+                text=text,
+                file_path=temp_path
+            )
 
             pygame.mixer.init()
             pygame.mixer.music.load(temp_path)
