@@ -8,11 +8,11 @@ import threading
 import time
 import os
 import signal
-import asyncio
-import edge_tts
 import pygame
 import Levenshtein
-import commands  # <-- your commands.py file
+import commands 
+from TTS.api import TTS
+from colorama import Fore, Style
 
 # ==============================
 # CONFIG
@@ -22,12 +22,13 @@ MODEL_PATH = "vosk-model-small-en-us-0.15"
 SERVER_URL = "http://127.0.0.1:8000/jarvis"
 DEVICE_ID = "voice_client"
 WAKE_WORD = "jarvis"
+TTS_TOKEN = "sk_de201713a820264afe8a612b2131440c5af7190e8a49d857"
 
 SAMPLE_RATE = 16000
 BLOCK_SIZE = 8000
-COMMAND_TIMEOUT = 6  # seconds
+COMMAND_TIMEOUT = 6
+tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", progress_bar=False)
 
-VOICE = "en-US-AndrewMultilingualNeural"
 
 # ==============================
 # GLOBAL STATE
@@ -49,9 +50,11 @@ def fuzzy_match(a: str, b: str, threshold=0.75):
 # Load Vosk Model
 # ==============================
 
+print(Fore.GREEN)
 print("Loading Vosk model...")
 model = vosk.Model(MODEL_PATH)
 print("Model loaded.")
+print(Style.RESET_ALL)
 
 # ==============================
 # Audio Callback
@@ -65,7 +68,7 @@ def audio_callback(indata, frames, time_info, status):
         audio_queue.put(bytes(indata))
 
 # ==============================
-# TTS Function
+# TTS Function (ElevenLabs)
 # ==============================
 
 def speak(text: str):
@@ -74,31 +77,33 @@ def speak(text: str):
     def _run():
         global is_speaking
         is_speaking = True
+        print(Fore.CYAN)
         print("Jarvis:", text)
 
-        async def generate():
-            try:
-                communicate = edge_tts.Communicate(text, VOICE)
-
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
-                    temp_path = f.name
-
-                await communicate.save(temp_path)
-
-                pygame.mixer.init()
-                pygame.mixer.music.load(temp_path)
-                pygame.mixer.music.play()
-
-                while pygame.mixer.music.get_busy():
-                    pygame.time.Clock().tick(10)
-
-                os.remove(temp_path)
-
-            except Exception as e:
-                print("TTS error:", e)
-
         try:
-            asyncio.run(generate())
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
+                temp_path = f.name
+
+            # Generate speech (AI TTS)
+            tts.tts_to_file(
+                text=text,
+                file_path=temp_path
+            )
+
+            pygame.mixer.init()
+            pygame.mixer.music.load(temp_path)
+            pygame.mixer.music.play()
+
+            while pygame.mixer.music.get_busy():
+                pygame.time.Clock().tick(10)
+
+            os.remove(temp_path)
+
+        except Exception as e:
+            print(Fore.RED)
+            print("TTS error:", e)
+            print(Style.RESET_ALL)
+
         finally:
             is_speaking = False
 
@@ -117,6 +122,7 @@ def ask_server(text: str):
         )
         return r.json().get("reply", "No response.")
     except Exception as e:
+        print(Fore.RED)
         print("Server error:", e)
         return "I am having trouble connecting to the server."
 
@@ -128,6 +134,7 @@ def check_local_command(text: str):
     try:
         return commands.run_command(text)
     except Exception as e:
+        print(Fore.RED)
         print("Command error:", e)
         return None
 
@@ -157,6 +164,7 @@ def listen_for_phrase(timeout=None):
 
 def shutdown_handler(sig, frame):
     global running
+    print(Fore.RED)
     print("\nShutting down...")
     running = False
 
@@ -165,7 +173,7 @@ signal.signal(signal.SIGINT, shutdown_handler)
 # ==============================
 # MAIN LOOP
 # ==============================
-
+print(Style.RESET_ALL)
 print("Jarvis online.")
 print(f"Say '{WAKE_WORD}' to activate.\n")
 
@@ -192,30 +200,33 @@ with sd.RawInputStream(
         wake_detected = False
 
         for word in words:
-            if fuzzy_match(word, WAKE_WORD, 0.1):
+            if fuzzy_match(word, WAKE_WORD, 1):
                 wake_detected = True
                 break
 
         if wake_detected:
+            print(Fore.BLUE)
             print("Wake word detected!")
 
             # Remove fuzzy wake word
             command_words = []
 
             for word in words:
-                if not fuzzy_match(word, WAKE_WORD, 0.75):
+                if not fuzzy_match(word, WAKE_WORD, 0.01):
                     command_words.append(word)
 
             command = " ".join(command_words).strip()
 
             if command == "":
+                print(Fore.BLUE)
                 speak("Yes sir.")
                 command = listen_for_phrase(timeout=COMMAND_TIMEOUT)
 
                 if command == "":
+                    print(Fore.BLUE)
                     speak("I didn't catch anything. Please try again.")
                     continue
-
+            print(Fore.YELLOW)
             print("You:", command)
 
             # ==============================
@@ -229,5 +240,5 @@ with sd.RawInputStream(
             else:
                 reply = ask_server(command)
                 speak(reply)
-
+print(Style.RESET_ALL)
 print("Exited cleanly.")
