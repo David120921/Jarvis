@@ -4,13 +4,13 @@ import sounddevice as sd
 import vosk
 import json
 import requests
-import tempfile
 import threading
 import os
-import pygame
 import Levenshtein
 import commands
-from elevenlabs.client import ElevenLabs
+import sounddevice as sd
+import asyncio
+import edge_tts
 
 # ==============================
 # CONFIG
@@ -87,49 +87,32 @@ def audio_callback(indata, frames, time_info, status):
 # TTS
 # ==============================
 
-def speak(text):
-
+def speak(text: str):
     global is_speaking
 
-    def _run():
-
+    async def _speak_async(text):
         global is_speaking
         is_speaking = True
-
-        log("Jarvis: " + text)
+        print(Fore.CYAN)
+        print("Jarvis:", text)
 
         try:
+            communicate = edge_tts.Communicate(text, voice="en-US-AriaNeural")
+            await communicate.save("temp_voice.wav")
 
-            client = ElevenLabs(api_key=TTS_TOKEN)
-
-            audio = client.text_to_speech.convert(
-                voice_id="pNInz6obpgDQGcFmaJgB",
-                model_id="eleven_multilingual_v2",
-                text=text
-            )
-
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
-                temp_path = f.name
-
-            with open(temp_path, "wb") as audio_file:
-                for chunk in audio:
-                    audio_file.write(chunk)
-
-            pygame.mixer.init()
-            pygame.mixer.music.load(temp_path)
-            pygame.mixer.music.play()
-
-            while pygame.mixer.music.get_busy():
-                pygame.time.Clock().tick(10)
-
-            os.remove(temp_path)
+            # Play audio
+            os.system("ffplay -nodisp -autoexit temp_voice.wav >nul 2>&1")
+            os.remove("temp_voice.wav")
 
         except Exception as e:
-            log("TTS error: " + str(e))
+            print(Fore.RED)
+            print("TTS error:", e)
+            print(Style.RESET_ALL)
+        finally:
+            is_speaking = False
 
-        is_speaking = False
+    threading.Thread(target=lambda: asyncio.run(_speak_async(text)), daemon=True).start()
 
-    threading.Thread(target=_run).start()
 
 # ==============================
 # SERVER
