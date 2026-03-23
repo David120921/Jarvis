@@ -3,16 +3,14 @@ import sounddevice as sd
 import vosk
 import json
 import requests
-import tempfile
 import threading
 import time
-import os
 import signal
-import pygame
 import Levenshtein
 import commands 
-from TTS.api import TTS
 from colorama import Fore, Style
+import asyncio
+import edge_tts
 
 # ==============================
 # CONFIG
@@ -23,11 +21,9 @@ SERVER_URL = "http://127.0.0.1:8000/jarvis"
 DEVICE_ID = "voice_client"
 WAKE_WORD = "jarvis"
 TTS_TOKEN = "sk_de201713a820264afe8a612b2131440c5af7190e8a49d857"
-
 SAMPLE_RATE = 16000
 BLOCK_SIZE = 8000
 COMMAND_TIMEOUT = 6
-tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", progress_bar=False)
 
 # ==============================
 # GLOBAL STATE
@@ -73,40 +69,29 @@ def audio_callback(indata, frames, time_info, status):
 def speak(text: str):
     global is_speaking
 
-    def _run():
+    async def _speak_async(text):
         global is_speaking
         is_speaking = True
         print(Fore.CYAN)
         print("Jarvis:", text)
 
         try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-                temp_path = f.name
+            communicate = edge_tts.Communicate(text, voice="en-US-AriaNeural")
+            await communicate.save("temp_voice.wav")
 
-            # Generate speech (AI TTS)
-            tts.tts_to_file(
-                text=text,
-                file_path=temp_path
-            )
-
-            pygame.mixer.init()
-            pygame.mixer.music.load(temp_path)
-            pygame.mixer.music.play()
-
-            while pygame.mixer.music.get_busy():
-                pygame.time.Clock().tick(10)
-
-            os.remove(temp_path)
+            # Play audio
+            os.system("ffplay -nodisp -autoexit temp_voice.wav >nul 2>&1")
+            os.remove("temp_voice.wav")
 
         except Exception as e:
             print(Fore.RED)
             print("TTS error:", e)
             print(Style.RESET_ALL)
-
         finally:
             is_speaking = False
 
-    threading.Thread(target=_run, daemon=True).start()
+    # Run in a separate thread
+    threading.Thread(target=lambda: asyncio.run(_speak_async(text)), daemon=True).start()
 
 # ==============================
 # AI Server Call
