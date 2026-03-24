@@ -3,14 +3,17 @@ import sounddevice as sd
 import vosk
 import json
 import requests
+import tempfile
 import threading
 import time
+import os
 import signal
+import asyncio
+import edge_tts
+import pygame
 import Levenshtein
 import commands 
 from colorama import Fore, Style
-import asyncio
-import edge_tts
 
 # ==============================
 # CONFIG
@@ -20,10 +23,12 @@ MODEL_PATH = "vosk-model-small-en-us-0.15"
 SERVER_URL = "http://127.0.0.1:8000/jarvis"
 DEVICE_ID = "voice_client"
 WAKE_WORD = "jarvis"
-TTS_TOKEN = "sk_de201713a820264afe8a612b2131440c5af7190e8a49d857"
+
 SAMPLE_RATE = 16000
 BLOCK_SIZE = 8000
-COMMAND_TIMEOUT = 6
+COMMAND_TIMEOUT = 6  # seconds
+
+VOICE = "en-US-AndrewMultilingualNeural"
 
 # ==============================
 # GLOBAL STATE
@@ -63,35 +68,47 @@ def audio_callback(indata, frames, time_info, status):
         audio_queue.put(bytes(indata))
 
 # ==============================
-# TTS Function (ElevenLabs)
+# TTS Function
 # ==============================
 
 def speak(text: str):
     global is_speaking
 
-    async def _speak_async(text):
+    def _run():
         global is_speaking
         is_speaking = True
         print(Fore.CYAN)
         print("Jarvis:", text)
 
+        async def generate():
+            try:
+                communicate = edge_tts.Communicate(text, VOICE)
+
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
+                    temp_path = f.name
+
+                await communicate.save(temp_path)
+
+                pygame.mixer.init()
+                pygame.mixer.music.load(temp_path)
+                pygame.mixer.music.play()
+
+                while pygame.mixer.music.get_busy():
+                    pygame.time.Clock().tick(10)
+
+                os.remove(temp_path)
+
+            except Exception as e:
+                print(Fore.RED)
+                print("TTS error:", e)
+                print(Style.RESET_ALL)
+
         try:
-            communicate = edge_tts.Communicate(text, voice="en-US-AriaNeural")
-            await communicate.save("temp_voice.wav")
-
-            # Play audio
-            os.system("ffplay -nodisp -autoexit temp_voice.wav >nul 2>&1")
-            os.remove("temp_voice.wav")
-
-        except Exception as e:
-            print(Fore.RED)
-            print("TTS error:", e)
-            print(Style.RESET_ALL)
+            asyncio.run(generate())
         finally:
             is_speaking = False
 
-    # Run in a separate thread
-    threading.Thread(target=lambda: asyncio.run(_speak_async(text)), daemon=True).start()
+    threading.Thread(target=_run, daemon=True).start()
 
 # ==============================
 # AI Server Call
@@ -191,7 +208,6 @@ with sd.RawInputStream(
         if wake_detected:
             print(Fore.BLUE)
             print("Wake word detected!")
-            
 
             # Remove fuzzy wake word
             command_words = []

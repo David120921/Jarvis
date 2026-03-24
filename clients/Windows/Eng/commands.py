@@ -32,6 +32,7 @@ COMMANDS = {
     "open steam": "steam",
     "open visual studio code": "vscode",
     "open discord": "discord",
+    "little brother": "blue tractor",
     "time": "time",
     "shutdown": "shutdown",
     "restart": "restart",
@@ -91,6 +92,14 @@ def run_command(text: str):
     if action == "time":
         now = datetime.datetime.now().strftime("%I:%M %p")
         return f"The time is {now}"
+    
+    # ======================
+    # Little Brother
+    # ======================
+
+    if action == "blue tractor":
+        webbrowser.open("https://www.youtube.com/watch?v=LbOve_UZZ54&list=RDLbOve_UZZ54&start_radio=1")
+        return "Helping with your little brother "
 
     # ======================
     # OPEN CHROME
