@@ -22,11 +22,11 @@ from colorama import Fore, Style
 MODEL_PATH = "vosk-model-small-ru-0.22"
 SERVER_URL = "http://127.0.0.1:8000/jarvis"
 DEVICE_ID = "voice_client"
-WAKE_WORD = "Джарвис"
+WAKE_WORD = "джарвис"
 
 SAMPLE_RATE = 16000
 BLOCK_SIZE = 8000
-COMMAND_TIMEOUT = 6  # seconds
+COMMAND_TIMEOUT = 6
 
 VOICE = "ru-RU-DmitryNeural"
 
@@ -183,14 +183,14 @@ with sd.RawInputStream(
     blocksize=BLOCK_SIZE,
     dtype="int16",
     channels=1,
-    callback=audio_callback
+    callback=audio_callback,
+    latency='low'
 ):
-
     while running:
 
         phrase = listen_for_phrase()
 
-        if not phrase:
+        if not phrase.strip():
             continue
 
         # ==============================
